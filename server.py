@@ -1,5 +1,9 @@
 import socket
 import time
+import os
+from _thread import *
+
+
 
 HOST = '172.1.0.4'  # Standard loopback interface address (localhost)
 PORT = 65432        # Port to listen on (non-privileged ports are > 1023)
@@ -38,34 +42,10 @@ while True:
     print("message sent!")
     time.sleep(1)"""
 
-import os
-from _thread import *
-
 ServerSocket = socket.socket()
-server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-host = '127.0.0.1'
-port = 1233
-ThreadCount = 0
-server.bind(("", 44444))
-message = b"your very important message"
-while True:
-    server.sendto(message, ('<broadcast>', 37020))
-    print("message sent!")
-    time.sleep(1)
-
-try:
-    server.close()
-    ServerSocket.bind((host, port))
-    #server.bind((host, port))
-except socket.error as e:
-    print(str(e))
-
-ServerSocket.listen(5)
 
 
 def threaded_client(connection):
-    #connection.send(str.encode('Welcome to the Server\n'))
     while True:
         data = connection.recv(2048)
         reply = 'Server Says: ' + data.decode('utf-8')
@@ -74,10 +54,51 @@ def threaded_client(connection):
         connection.sendall(str.encode(reply))
     connection.close()
 
-while True:
-    Client, address = ServerSocket.accept()
-    print('Connected to: ' + address[0] + ':' + str(address[1]))
-    start_new_thread(threaded_client, (Client, ))
-    ThreadCount += 1
-    print('Thread Number: ' + str(ThreadCount))
-ServerSocket.close()
+
+def broadcast():
+    print("here")
+    server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    server.bind(("", 44444))
+    message = b"offer"
+    while True:
+        server.sendto(message, ('<broadcast>', 37020))
+        print("message sent!")
+        time.sleep(1)
+
+
+def tcpConnect():
+    host = '127.0.0.1'
+    port = 1233
+    ThreadCount = 0
+    try:
+        ServerSocket.bind((host, port))
+        # server.bind((host, port))
+    except socket.error as e:
+        print(str(e))
+
+    ServerSocket.listen(5)
+
+    while True:
+        Client, address = ServerSocket.accept()
+        print('Connected to: ' + address[0] + ':' + str(address[1]))
+        start_new_thread(threaded_client, (Client,))
+        ThreadCount += 1
+        print('Thread Number: ' + str(ThreadCount))
+    ServerSocket.close()
+
+
+try:
+    start_new_thread(broadcast, ()) #send brodcast
+    start_new_thread(tcpConnect, ()) #connect to server
+except:
+   print("Error: unable to start thread")
+
+
+while 1:
+   pass
+
+
+
+
+
