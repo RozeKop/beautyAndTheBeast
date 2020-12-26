@@ -2,6 +2,7 @@ import socket
 import time
 import os
 from _thread import *
+import random
 
 
 
@@ -44,24 +45,37 @@ while True:
 
 ServerSocket = socket.socket()
 
-
+group1 = []
+group2 = []
 def threaded_client(connection):
-    while True:
-        data = connection.recv(2048)
-        reply = 'Server Says: ' + data.decode('utf-8')
-        if not data:
-            break
-        connection.sendall(str.encode(reply))
+    connection.sendall(str.encode("please write your team name"))
+    data = connection.recv(1024)
+    name = data.decode('utf-8')
+    print(name)
+    print(name[:len(name)-2])
+    choose_group = random.randint(1, 2)
+    if choose_group == 1:
+        if len(group1) < 2:
+            group1.append(name[:len(name)-2])
+        else:
+            group2.append(name[:len(name) - 2])
+    else:
+        if len(group2) < 2:
+            group2.append(name[:len(name)-2])
+        else:
+            group1.append(name[:len(name) - 2])
+    print(group1)
+    print(group2)
     connection.close()
 
 
 def broadcast():
-    print("here")
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     server.bind(("", 44444))
     message = b"offer"
-    while True:
+    t_end = time.time() + 20 #change to 10
+    while time.time() < t_end:
         server.sendto(message, ('<broadcast>', 37020))
         print("message sent!")
         time.sleep(1)
