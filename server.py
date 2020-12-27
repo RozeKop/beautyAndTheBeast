@@ -50,6 +50,8 @@ port = 1233
 ThreadCount = 0
 group1 = []
 group2 = []
+portToGroup ={}
+
 
 
 def threaded_client(connection,t_end):
@@ -62,22 +64,29 @@ def threaded_client(connection,t_end):
     if choose_group == 1:
         if len(group1) < 2:
             group1.append(name[:len(name)-2])
+            portToGroup[connection.getsockname()[1]] = 1
         else:
             group2.append(name[:len(name) - 2])
+            portToGroup[connection.getsockname()[1]] = 2
     else:
         if len(group2) < 2:
             group2.append(name[:len(name)-2])
+            portToGroup[connection.getsockname()[1]] = 2
         else:
             group1.append(name[:len(name) - 2])
+            portToGroup[connection.getsockname()[1]] = 1
     print(group1)
     print(group2)
     stam = 0
     while time.time() < t_end:
         stam += 1
-    welcome_Massage(connection)
+    welcome_message(connection)
     connection.close()
 
-def welcome_Massage(connection):
+
+def welcome_message(connection):
+    counter1 = 0
+    counter2 = 0
     massage = "Welcome to Keyboard Spamming Battle Royal\nGroup1:\n"
     massage += "==\n"
     massage += group1[0] + "\n"
@@ -87,10 +96,17 @@ def welcome_Massage(connection):
     massage += group2[1] + "\n\n\n"
     massage += "start pressing keys on your keyboard as fast as you can!!\n"
     connection.sendall(massage.encode())
-    record = keyboard.record()
-    keyboard.start_recording()
-    keyboard.play(record, speed_factor=3)
-
+    while True:
+        if connection.getsockname()[1] in portToGroup.keys():
+            if portToGroup[connection.getsockname()[1]] == 1:
+                counter1 +=1
+                print("1: ", counter1)
+            else:
+                counter2 +=1
+                print("2: ", counter2)
+        Response = connection.recv(1024)
+        #print("adress: ",addr)
+        print(Response.decode('utf-8'))
 
 
 def broadcast():
@@ -98,7 +114,6 @@ def broadcast():
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR , 1)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     server.bind(("", 44444))
-    #message = b"offer "
     message = "offer " + str(port + ThreadCount)
     t_end = time.time() + 30 #change to 10
     while time.time() < t_end:
@@ -129,7 +144,7 @@ def tcpConnect(ThreadCount,t_end):
 try:
     start_new_thread(broadcast, ()) #send brodcast
     t_end = time.time() + 30  # change to 10
-    start_new_thread(tcpConnect, (ThreadCount,t_end,)) #connect to server
+    start_new_thread(tcpConnect, (ThreadCount, t_end,)) #connect to server
 except:
    print("Error: unable to start thread")
 

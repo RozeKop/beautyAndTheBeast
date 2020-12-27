@@ -1,5 +1,7 @@
 import socket
 import random
+import keyboard
+import time
 
 """with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((socket.gethostname(),65432))
@@ -41,11 +43,17 @@ while True:
     except socket.error as e:
         print(str(e))
 
-while True:
-    Response = ClientSocket.recv(1024)
-    print(Response.decode('utf-8'))
-    Input = input('Group name: ')
-    ClientSocket.send(str.encode(Input))
+
+Response = ClientSocket.recv(1024)
+print(Response.decode('utf-8'))
+Input = input('Group name: ')
+ClientSocket.send(str.encode(Input))
+Response = ClientSocket.recv(1024)
+print(Response.decode('utf-8'))
+t_end = time.time() + 10
+while time.time() < t_end:
+    try1 = keyboard.read_key(True)
+    ClientSocket.send(str.encode(try1))
     #Response = ClientSocket.recv(1024)
     #print(Response.decode('utf-8'))
 
