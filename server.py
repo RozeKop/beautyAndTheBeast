@@ -3,6 +3,7 @@ import time
 import os
 from _thread import *
 import random
+import keyboard
 
 
 
@@ -44,10 +45,14 @@ while True:
     time.sleep(1)"""
 
 ServerSocket = socket.socket()
-
+host = '127.0.0.1'
+port = 1233
+ThreadCount = 0
 group1 = []
 group2 = []
-def threaded_client(connection):
+
+
+def threaded_client(connection,t_end):
     connection.sendall(str.encode("please write your team name"))
     data = connection.recv(1024)
     name = data.decode('utf-8')
@@ -66,25 +71,44 @@ def threaded_client(connection):
             group1.append(name[:len(name) - 2])
     print(group1)
     print(group2)
+    stam = 0
+    while time.time() < t_end:
+        stam += 1
+    welcome_Massage(connection)
     connection.close()
+
+def welcome_Massage(connection):
+    massage = "Welcome to Keyboard Spamming Battle Royal\nGroup1:\n"
+    massage += "==\n"
+    massage += group1[0] + "\n"
+    massage += group1[1] + "\n"
+    massage += "Group2:\n==\n"
+    massage += group2[0] + "\n"
+    massage += group2[1] + "\n\n\n"
+    massage += "start pressing keys on your keyboard as fast as you can!!\n"
+    connection.sendall(massage.encode())
+    record = keyboard.record()
+    keyboard.start_recording()
+    keyboard.play(record, speed_factor=3)
+
 
 
 def broadcast():
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR , 1)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     server.bind(("", 44444))
-    message = b"offer"
-    t_end = time.time() + 20 #change to 10
+    #message = b"offer "
+    message = "offer " + str(port + ThreadCount)
+    t_end = time.time() + 30 #change to 10
     while time.time() < t_end:
-        server.sendto(message, ('<broadcast>', 37020))
+        server.sendto(message.encode(), ('<broadcast>', 37020))
         print("message sent!")
         time.sleep(1)
 
 
-def tcpConnect():
-    host = '127.0.0.1'
-    port = 1233
-    ThreadCount = 0
+
+def tcpConnect(ThreadCount,t_end):
     try:
         ServerSocket.bind((host, port))
         # server.bind((host, port))
@@ -96,7 +120,7 @@ def tcpConnect():
     while True:
         Client, address = ServerSocket.accept()
         print('Connected to: ' + address[0] + ':' + str(address[1]))
-        start_new_thread(threaded_client, (Client,))
+        start_new_thread(threaded_client, (Client,t_end,))
         ThreadCount += 1
         print('Thread Number: ' + str(ThreadCount))
     ServerSocket.close()
@@ -104,7 +128,8 @@ def tcpConnect():
 
 try:
     start_new_thread(broadcast, ()) #send brodcast
-    start_new_thread(tcpConnect, ()) #connect to server
+    t_end = time.time() + 30  # change to 10
+    start_new_thread(tcpConnect, (ThreadCount,t_end,)) #connect to server
 except:
    print("Error: unable to start thread")
 
