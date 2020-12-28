@@ -39,6 +39,7 @@ while True:
     try:
         port = data.decode('utf-8')[6:10]
         ClientSocket.connect((host, int(port)))
+        print("The port I am binding is Client: ", port)
         break
     except socket.error as e:
         print(str(e))
@@ -50,7 +51,7 @@ Input = input('Group name: ')
 ClientSocket.send(str.encode(Input))
 Response = ClientSocket.recv(1024)
 print(Response.decode('utf-8'))
-t_end = time.time() + 10
+t_end = time.time() + 50
 while time.time() < t_end:
     try1 = keyboard.read_key(True)
     ClientSocket.send(str.encode(try1))

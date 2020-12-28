@@ -64,17 +64,17 @@ def threaded_client(connection,t_end):
     if choose_group == 1:
         if len(group1) < 2:
             group1.append(name[:len(name)-2])
-            portToGroup[connection.getsockname()[1]] = 1
+            portToGroup[connection.getpeername()[1]] = 1
         else:
             group2.append(name[:len(name) - 2])
-            portToGroup[connection.getsockname()[1]] = 2
+            portToGroup[connection.getpeername()[1]] = 2
     else:
         if len(group2) < 2:
             group2.append(name[:len(name)-2])
-            portToGroup[connection.getsockname()[1]] = 2
+            portToGroup[connection.getpeername()[1]] = 2
         else:
             group1.append(name[:len(name) - 2])
-            portToGroup[connection.getsockname()[1]] = 1
+            portToGroup[connection.getpeername()[1]] = 1
     print(group1)
     print(group2)
     stam = 0
@@ -85,6 +85,7 @@ def threaded_client(connection,t_end):
 
 
 def welcome_message(connection):
+    print("the first connection",connection.getpeername()[1])
     counter1 = 0
     counter2 = 0
     massage = "Welcome to Keyboard Spamming Battle Royal\nGroup1:\n"
@@ -96,20 +97,29 @@ def welcome_message(connection):
     massage += group2[1] + "\n\n\n"
     massage += "start pressing keys on your keyboard as fast as you can!!\n"
     connection.sendall(massage.encode())
+    #print(portToGroup,"!!!!!!!!!!!!!!!!!!")
     while True:
-        if connection.getsockname()[1] in portToGroup.keys():
-            if portToGroup[connection.getsockname()[1]] == 1:
-                counter1 +=1
-                print("1: ", counter1)
-            else:
-                counter2 +=1
-                print("2: ", counter2)
         Response = connection.recv(1024)
-        #print("adress: ",addr)
+        # print("adress: ",addr)
         print(Response.decode('utf-8'))
+        if (Response):
+            if connection.getpeername()[1] in portToGroup.keys():
+                print(connection.getpeername()[1])
+                #print(portToGroup[connection.getpeername()[1]])
+                #print(portToGroup[connection.getpeername()[1]] == 1)
+                if portToGroup[connection.getpeername()[1]] == 1:
+                    #print("am I here?")
+                    counter1 += len(Response)
+                    print("1: ", counter1)
+                    #print("group:", portToGroup[connection.getpeername()[1]])
+                else:
+                    counter2 += len(Response)
+                    print("2: ", counter2)
+                    #print("group:", portToGroup[connection.getpeername()[1]])
 
 
-def broadcast():
+
+def broadcast(ThreadCount):
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR , 1)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -125,7 +135,8 @@ def broadcast():
 
 def tcpConnect(ThreadCount,t_end):
     try:
-        ServerSocket.bind((host, port))
+        ServerSocket.bind((host, port+ThreadCount))
+        print("The port I am binding is: " ,port+ThreadCount)
         # server.bind((host, port))
     except socket.error as e:
         print(str(e))
@@ -134,6 +145,10 @@ def tcpConnect(ThreadCount,t_end):
 
     while True:
         Client, address = ServerSocket.accept()
+        #print(Client)
+        print(Client , "????????????????")
+        print(Client.getsockname() , "????????????????")
+        print(Client.getpeername()[1] , "????????????????")
         print('Connected to: ' + address[0] + ':' + str(address[1]))
         start_new_thread(threaded_client, (Client,t_end,))
         ThreadCount += 1
@@ -142,7 +157,7 @@ def tcpConnect(ThreadCount,t_end):
 
 
 try:
-    start_new_thread(broadcast, ()) #send brodcast
+    start_new_thread(broadcast, (ThreadCount,)) #send brodcast
     t_end = time.time() + 30  # change to 10
     start_new_thread(tcpConnect, (ThreadCount, t_end,)) #connect to server
 except:
