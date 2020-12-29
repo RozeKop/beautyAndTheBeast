@@ -5,45 +5,6 @@ from _thread import *
 import random
 import keyboard
 
-
-
-HOST = '172.1.0.4'  # Standard loopback interface address (localhost)
-PORT = 65432        # Port to listen on (non-privileged ports are > 1023)
-
-"""
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s.bind((socket.gethostname(), PORT)) #change to HOST later
-    s.listen()
-    print("Server started, listening on IP address 172.1.04")
-    conn, addr = s.accept()
-    with conn:
-        #print("Server started, listening on IP address 172.1.04")
-        print('Connected by', addr)
-        while True:
-            data = conn.recv(1024)
-            if not data:
-                break
-            conn.sendall(data)
-"""
-
-# Enable port reusage so we will be able to run multiple clients and servers on single (host, port).
-# Do not use socket.SO_REUSEADDR except you using linux(kernel<3.9): goto https://stackoverflow.com/questions/14388706/how-do-so-reuseaddr-and-so-reuseport-differ for more information.
-# For linux hosts all sockets that want to share the same address and port combination must belong to processes that share the same effective user ID!
-# So, on linux(kernel>=3.9) you have to run multiple servers and clients under one user to share the same (host, port).
-# Thanks to @stevenreddie
-"""server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-# Set a timeout so the socket does not block
-# indefinitely when trying to receive data.
-server.settimeout(0.2)
-print("Server started, listening on IP address 172.1.04")
-server.bind(("", 44444))
-message = b"your very important message"
-while True:
-    server.sendto(message, ('<broadcast>', 37020))
-    print("message sent!")
-    time.sleep(1)"""
-
 ServerSocket = socket.socket()
 host = '127.0.0.1'
 port = 1233
@@ -51,10 +12,11 @@ ThreadCount = 0
 group1 = []
 group2 = []
 portToGroup ={}
+clients = {}
 
 
-
-def threaded_client(connection,t_end):
+def threaded_client(connection, t_end):
+    global clients
     connection.sendall(str.encode("please write your team name"))
     data = connection.recv(1024)
     name = data.decode('utf-8')
@@ -80,12 +42,14 @@ def threaded_client(connection,t_end):
     stam = 0
     while time.time() < t_end:
         stam += 1
-    welcome_message(connection)
-    connection.close()
+    for client in clients.keys():
+        start_new_thread(welcome_message, (clients[client],))
+    #welcome_message(connection)
+    #connection.close()
 
 
 def welcome_message(connection):
-    print("the first connection",connection.getpeername()[1])
+    print("the first connection",connection)
     counter1 = 0
     counter2 = 0
     massage = "Welcome to Keyboard Spamming Battle Royal\nGroup1:\n"
@@ -97,26 +61,18 @@ def welcome_message(connection):
     massage += group2[1] + "\n\n\n"
     massage += "start pressing keys on your keyboard as fast as you can!!\n"
     connection.sendall(massage.encode())
-    #print(portToGroup,"!!!!!!!!!!!!!!!!!!")
     while True:
         Response = connection.recv(1024)
-        # print("adress: ",addr)
         print(Response.decode('utf-8'))
         if (Response):
             if connection.getpeername()[1] in portToGroup.keys():
                 print(connection.getpeername()[1])
-                #print(portToGroup[connection.getpeername()[1]])
-                #print(portToGroup[connection.getpeername()[1]] == 1)
                 if portToGroup[connection.getpeername()[1]] == 1:
-                    #print("am I here?")
                     counter1 += len(Response)
                     print("1: ", counter1)
-                    #print("group:", portToGroup[connection.getpeername()[1]])
                 else:
                     counter2 += len(Response)
                     print("2: ", counter2)
-                    #print("group:", portToGroup[connection.getpeername()[1]])
-
 
 
 def broadcast(ThreadCount):
@@ -132,11 +88,10 @@ def broadcast(ThreadCount):
         time.sleep(1)
 
 
-
 def tcpConnect(ThreadCount,t_end):
     try:
         ServerSocket.bind((host, port+ThreadCount))
-        print("The port I am binding is: " ,port+ThreadCount)
+        print("The port I am binding is: ", port+ThreadCount)
         # server.bind((host, port))
     except socket.error as e:
         print(str(e))
@@ -145,11 +100,8 @@ def tcpConnect(ThreadCount,t_end):
 
     while True:
         Client, address = ServerSocket.accept()
-        #print(Client)
-        print(Client , "????????????????")
-        print(Client.getsockname() , "????????????????")
-        print(Client.getpeername()[1] , "????????????????")
         print('Connected to: ' + address[0] + ':' + str(address[1]))
+        clients[address[1]] = Client
         start_new_thread(threaded_client, (Client,t_end,))
         ThreadCount += 1
         print('Thread Number: ' + str(ThreadCount))
