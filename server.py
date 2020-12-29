@@ -3,7 +3,7 @@ import time
 import os
 from _thread import *
 import random
-import keyboard
+import struct
 
 ServerSocket = socket.socket()
 host = '127.0.0.1'
@@ -13,55 +13,55 @@ group1 = []
 group2 = []
 portToGroup ={}
 clients = {}
+choose_team =0
+counter1 = 0
+counter2 = 0
 
 
 def threaded_client(connection, t_end):
     global clients
+    global choose_team
     connection.sendall(str.encode("please write your team name"))
     data = connection.recv(1024)
     name = data.decode('utf-8')
-    print(name)
-    print(name[:len(name)-2])
     choose_group = random.randint(1, 2)
-    if choose_group == 1:
-        if len(group1) < 2:
-            group1.append(name[:len(name)-2])
-            portToGroup[connection.getpeername()[1]] = 1
-        else:
-            group2.append(name[:len(name) - 2])
-            portToGroup[connection.getpeername()[1]] = 2
+    if choose_team == 0:
+        group1.append(name[:len(name)-1])
+        portToGroup[connection.getpeername()[1]] = 1
+        choose_team = 1
     else:
-        if len(group2) < 2:
-            group2.append(name[:len(name)-2])
-            portToGroup[connection.getpeername()[1]] = 2
-        else:
-            group1.append(name[:len(name) - 2])
-            portToGroup[connection.getpeername()[1]] = 1
+        group2.append(name[:len(name)-1])
+        portToGroup[connection.getpeername()[1]] = 2
+        choose_team = 0
     print(group1)
     print(group2)
     stam = 0
     while time.time() < t_end:
         stam += 1
     for client in clients.keys():
-        start_new_thread(welcome_message, (clients[client],))
+        try:
+            start_new_thread(welcome_message, (clients[client],))
+        except:
+            print("Error: unable to start thread")
     #welcome_message(connection)
     #connection.close()
 
 
 def welcome_message(connection):
-    print("the first connection",connection)
-    counter1 = 0
-    counter2 = 0
+    global counter1
+    global counter2
     massage = "Welcome to Keyboard Spamming Battle Royal\nGroup1:\n"
     massage += "==\n"
-    massage += group1[0] + "\n"
-    massage += group1[1] + "\n"
+    for i in range(len(group1)):
+        massage += group1[i] + "\n"
     massage += "Group2:\n==\n"
-    massage += group2[0] + "\n"
-    massage += group2[1] + "\n\n\n"
+    for i in range(len(group2)):
+        massage += group2[i] + "\n"
+    massage += "\n\n"
     massage += "start pressing keys on your keyboard as fast as you can!!\n"
     connection.sendall(massage.encode())
-    while True:
+    t_end = time.time() + 20 #change to 10
+    while time.time() < t_end:
         Response = connection.recv(1024)
         print(Response.decode('utf-8'))
         if (Response):
@@ -73,17 +73,37 @@ def welcome_message(connection):
                 else:
                     counter2 += len(Response)
                     print("2: ", counter2)
+    print("heree?????????")
+    massage = "Game over!\nGroup1 typed in " ,counter1/4, "charecters. Group 2 typed in" ,counter2/4, "charecters.\n"
+    if counter1 > counter2:
+        massage += "Group 1 wins!\n\n"
+    else:
+        massage += "Group 2 wins!\n\n"
+    massage+= "Congratulasions to the winners:\n"
+    massage += "==\n"
+    if counter1 > counter2:
+        for i in range(len(group1)):
+            massage += group1[i] + "\n"
+    else:
+        for i in range(len(group2)):
+            massage += group2[i] + "\n"
+    connection.sendall(massage.encode())
+
 
 
 def broadcast(ThreadCount):
+    global port
+    global host
+    print("Server started,listening on IP address ", host)
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR , 1)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     server.bind(("", 44444))
-    message = "offer " + str(port + ThreadCount)
+    #message = "offer " + str(port + ThreadCount)
+    message = struct.pack('IbH', 0xfeedbeef, 0x2, port)
     t_end = time.time() + 30 #change to 10
     while time.time() < t_end:
-        server.sendto(message.encode(), ('<broadcast>', 37020))
+        server.sendto(message, ('<broadcast>', 37020))
         print("message sent!")
         time.sleep(1)
 
