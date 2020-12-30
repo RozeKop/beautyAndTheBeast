@@ -4,9 +4,12 @@ import os
 from _thread import *
 import random
 import struct
+import threading
+from scapy.arch import get_if_addr
 
 ServerSocket = 0
-host = '127.0.0.1'
+#host = '127.0.0.12'
+host = get_if_addr("eth1")
 port = 1233
 ThreadCount = 0
 group1 = []
@@ -16,7 +19,7 @@ clients = {}
 choose_team =0
 counter1 = 0
 counter2 = 0
-
+lock = threading.Lock()
 
 def threaded_client(connection, t_end):
     global clients
@@ -38,16 +41,7 @@ def threaded_client(connection, t_end):
     stam = 0
     while time.time() < t_end:
         stam += 1
-    # for client in clients.keys():
-    #     try:
-    #         start_new_thread(welcome_message, (clients[client],))
-    #
-    #
-    #     except:
-    #         print("Error: unable to start thread")
     start_new_thread(welcome_message,(connection,))
-    #welcome_message(connection)
-    #connection.close()
 
 
 def welcome_message(connection):
@@ -70,17 +64,18 @@ def welcome_message(connection):
             Response = connection.recv(1024).decode('utf-8')
         except:
             continue
-        print(t_end - time.time())
         if (Response):
             if connection.getpeername()[1] in portToGroup.keys():
-                # print(connection.getpeername()[1])
                 if portToGroup[connection.getpeername()[1]] == 1:
-                    counter1 += len(Response)//4
+                    lock.acquire()
+                    counter1 += max(len(Response)//4,1)
+                    lock.release()
                     print("1: ", counter1)
                 else:
-                    counter2 += len(Response)//4
+                    lock.acquire()
+                    counter2 += max(len(Response)//4,1)
+                    lock.release()
                     print("2: ", counter2)
-    print("heree?????????")
     massage = "Game over!\nGroup1 typed in " +str(counter1)+ " charecters. Group 2 typed in " +str(counter2)+ " charecters.\n"
     if counter1 > counter2:
         massage += "Group 1 wins!\n\n"
@@ -95,24 +90,22 @@ def welcome_message(connection):
         for i in range(len(group2)):
             massage += group2[i] + "\n"
     connection.send(massage.encode())
-    # connection.close()
 
 
 
-
-def broadcast(ThreadCount):
+def broadcast(ThreadCount,t_end):
     global port
     global host
+    #host = "172.0.1.12"
+    host = get_if_addr("eth1")
     print("Server started,listening on IP address ", host)
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR , 1)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     server.bind(("", 44444))
-    #message = "offer " + str(port + ThreadCount)
-    message = struct.pack('IbH', 0xfeedbeef, 0x2, port)
-    t_end = time.time() + 10 #change to 10
+    message = struct.pack('Ibh', int(0xfeedbeef), int(0x2), port)
     while time.time() < t_end:
-        server.sendto(message, ('<broadcast>', 37020))
+        server.sendto(message, ('<broadcast>', 13117))
         print("message sent!")
         time.sleep(1)
 
@@ -121,8 +114,6 @@ def tcpConnect(ThreadCount,t_end):
     global ServerSocket
     try:
         ServerSocket.bind((host, port+ThreadCount))
-        print("The port I am binding is: ", port+ThreadCount)
-        # server.bind((host, port))
     except socket.error as e:
         print(str(e))
 
@@ -136,12 +127,8 @@ def tcpConnect(ThreadCount,t_end):
         print('Connected to: ' + address[0] + ':' + str(address[1]))
         clients[address[1]] = Client
         start_new_thread(threaded_client, (Client,t_end,))
-        # threaded_client(Client, t_end)
         ThreadCount += 1
         print('Thread Number: ' + str(ThreadCount))
-
-
-
 
 
 def main():
@@ -159,13 +146,14 @@ def main():
     group1 = []
     group2 = []
     try:
+
         ServerSocket = socket.socket()
-        start_new_thread(broadcast, (ThreadCount,)) #send brodcast
-        t_end = time.time() + 20  # change to 10
+        t_end = time.time() + 10
+        start_new_thread(broadcast, (ThreadCount,t_end)) #send brodcast
         start_new_thread(tcpConnect, (ThreadCount, t_end,)) #connect to server
     except:
        print("Error: unable to start thread")
-    fin = time.time() + 60 # change time
+    fin = time.time() + 25 # change time
     while time.time() < fin:
         time.sleep(1)
     for client in clients.keys():
@@ -178,10 +166,12 @@ def main():
         pass
 
 
-while True:
-    flag = False
-    flag = main()
-    if flag :
-        flag = False
-        flag = main()
-
+def startS(num):
+    main()
+    #print("srvet")
+    #while True:
+    #    flag = False
+    #    flag = main()
+    #    if flag :
+    #        flag = False
+    #       flag = main()
