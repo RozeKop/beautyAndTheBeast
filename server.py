@@ -5,7 +5,7 @@ from _thread import *
 import random
 import struct
 
-ServerSocket = socket.socket()
+ServerSocket = 0
 host = '127.0.0.1'
 port = 1233
 ThreadCount = 0
@@ -118,6 +118,7 @@ def broadcast(ThreadCount):
 
 
 def tcpConnect(ThreadCount,t_end):
+    global ServerSocket
     try:
         ServerSocket.bind((host, port+ThreadCount))
         print("The port I am binding is: ", port+ThreadCount)
@@ -128,28 +129,59 @@ def tcpConnect(ThreadCount,t_end):
     ServerSocket.listen(5)
 
     while True:
-        Client, address = ServerSocket.accept()
+        try:
+            Client, address = ServerSocket.accept()
+        except:
+            continue
         print('Connected to: ' + address[0] + ':' + str(address[1]))
         clients[address[1]] = Client
         start_new_thread(threaded_client, (Client,t_end,))
         # threaded_client(Client, t_end)
         ThreadCount += 1
         print('Thread Number: ' + str(ThreadCount))
+
+
+
+
+
+def main():
+    global ServerSocket
+    global clients
+    global counter2
+    global counter1
+    global group1
+    global group2
+    global portToGroup
+    counter2 = 0
+    counter1 = 0
+    clients ={}
+    portToGroup = {}
+    group1 = []
+    group2 = []
+    try:
+        ServerSocket = socket.socket()
+        start_new_thread(broadcast, (ThreadCount,)) #send brodcast
+        t_end = time.time() + 20  # change to 10
+        start_new_thread(tcpConnect, (ThreadCount, t_end,)) #connect to server
+    except:
+       print("Error: unable to start thread")
+    fin = time.time() + 60 # change time
+    while time.time() < fin:
+        time.sleep(1)
+    for client in clients.keys():
+        clients[client].close()
     ServerSocket.close()
+    return True
 
 
-try:
-    start_new_thread(broadcast, (ThreadCount,)) #send brodcast
-    t_end = time.time() + 20  # change to 10
-    start_new_thread(tcpConnect, (ThreadCount, t_end,)) #connect to server
-except:
-   print("Error: unable to start thread")
+    while 1:
+        pass
 
 
-while 1:
-   pass
-
-
-
-
+while True:
+    flag = False
+    flag = main()
+    if flag :
+        flag = False
+        flag = main()
 
