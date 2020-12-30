@@ -35,6 +35,7 @@ while True:
     try:
         # port = data.decode('utf-8')[6:10]
         ClientSocket.connect((host, port_to_connect))
+
         print("The port I am binding is Client: ", port_to_connect)
         break
     except socket.error as e:
@@ -42,11 +43,26 @@ while True:
 
 
 def keyboard_client(ClientSocket, t_end):
+    print("here")
     while time.time() < t_end:
+        # while True:
+        # print("here2")
+        # while msvcrt.kbhit():
         if msvcrt.kbhit():
+            # print("here2")
             try1 = msvcrt.getch()  # read_key(True)
             ClientSocket.send(str.encode(str(try1)))
-    return
+            # print(str(try1), " ", ClientSocket.getsockname()[1], "I am sending")
+            # print(ClientSocket.getpeername()[0], ClientSocket.getpeername()[1])
+    print("tell me why")
+    Response = ClientSocket.recv(1024).decode('utf-8')
+    # while True:
+    #     try:
+    #         Response = ClientSocket.recv(1024).decode('utf-8')
+    #         break
+    #     except:
+    #         continue
+    print(Response)
 
 
 Response = ClientSocket.recv(1024)
@@ -55,25 +71,16 @@ Input = input('Group name: ')
 ClientSocket.send(str.encode(Input))
 Response = ClientSocket.recv(1024)
 print(Response.decode('utf-8'))
-t_end = time.time() + 20
-try:
-    start_new_thread(keyboard_client, (ClientSocket, t_end,))  # connect to server
-except:
-    print("Error: unable to start thread")
-stam = 0
-while time.time() < t_end:
-    stam += 1
-print("Client is on main")
-while True:
-    try:
-        Response = ClientSocket.recv(1024)
-        print(Response.decode('utf-8'))
-        break
-    except:
-        continue
-# Response = ClientSocket.recv(1024)
-# print(Response.decode('utf-8'))
+t_end = time.time() + 10
 
+# try:
+#      start_new_thread(keyboard_client, (ClientSocket, t_end,))  # connect to server
+#
+# except:
+#     print("Error: unable to start thread")
+keyboard_client(ClientSocket, t_end)
+
+# ClientSocket.close()
 while 1:
     pass
 
