@@ -5,12 +5,17 @@ from _thread import *
 import random
 import struct
 import threading
-from scapy.arch import get_if_addr
+
+
+
 
 ServerSocket = 0
-#host = '127.0.0.12'
-host = get_if_addr("eth1")
-port = 1233
+MSG_LEN = 1024
+FORMAT = 'utf-8'
+SSH_HOST = ""
+SSH_PORT = 2116
+portUDP = 44444
+sendUDP = 37020
 ThreadCount = 0
 group1 = []
 group2 = []
@@ -25,8 +30,8 @@ def threaded_client(connection, t_end):
     global clients
     global choose_team
     connection.sendall(str.encode("please write your team name"))
-    data = connection.recv(1024)
-    name = data.decode('utf-8')
+    data = connection.recv(MSG_LEN)
+    name = data.decode(FORMAT)
     choose_group = random.randint(1, 2)
     if choose_team == 0:
         group1.append(name[:len(name)-1])
@@ -41,7 +46,9 @@ def threaded_client(connection, t_end):
     stam = 0
     while time.time() < t_end:
         stam += 1
+
     start_new_thread(welcome_message,(connection,))
+
 
 
 def welcome_message(connection):
@@ -57,15 +64,17 @@ def welcome_message(connection):
     massage += "\n\n"
     massage += "start pressing keys on your keyboard as fast as you can!!\n"
     connection.send(massage.encode())
-    t_end = time.time() + 10 #change to 10
+    t_end = time.time() + 10
     connection.settimeout(1)
     while time.time() < t_end:
         try:
-            Response = connection.recv(1024).decode('utf-8')
+            Response = connection.recv(MSG_LEN).decode(FORMAT)
         except:
             continue
+
         if (Response):
             if connection.getpeername()[1] in portToGroup.keys():
+                # print(connection.getpeername()[1])
                 if portToGroup[connection.getpeername()[1]] == 1:
                     lock.acquire()
                     counter1 += max(len(Response)//4,1)
@@ -73,14 +82,15 @@ def welcome_message(connection):
                     print("1: ", counter1)
                 else:
                     lock.acquire()
-                    counter2 += max(len(Response)//4,1)
+                    counter2 += max(len(Response) // 4, 1)
                     lock.release()
                     print("2: ", counter2)
-    massage = "Game over!\nGroup1 typed in " +str(counter1)+ " charecters. Group 2 typed in " +str(counter2)+ " charecters.\n"
+
+    massage = "Game over!\nGroup1 typed in " +str(counter1)+ " characters. Group 2 typed in " +str(counter2)+ " charecters.\n"
     if counter1 > counter2:
-        massage += "Group 1 wins!\n\n"
+        massage += "Group 1 wins!"+"\n\n"
     else:
-        massage += "Group 2 wins!\n\n"
+        massage += "Group 2 wins!"+"\n\n"
     massage += "Congratulations to the winners:\n"
     massage += "==\n"
     if counter1 > counter2:
@@ -93,19 +103,19 @@ def welcome_message(connection):
 
 
 
-def broadcast(ThreadCount,t_end):
-    global port
-    global host
-    #host = "172.0.1.12"
-    host = get_if_addr("eth1")
-    print("Server started,listening on IP address ", host)
+
+
+def broadcast(ThreadCount):
+    print("Server started,listening on IP address ", SSH_HOST)
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR , 1)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    server.bind(("", 44444))
-    message = struct.pack('Ibh', int(0xfeedbeef), int(0x2), port)
+    server.bind((SSH_HOST, portUDP))
+    #message = "offer " + str(port + ThreadCount)
+    message = struct.pack('IbH', 0xfeedbeef, 0x2, SSH_PORT)
+    t_end = time.time() + 10 #change to 10
     while time.time() < t_end:
-        server.sendto(message, ('<broadcast>', 13117))
+        server.sendto(message, ('<broadcast>', sendUDP))
         print("message sent!")
         time.sleep(1)
 
@@ -113,7 +123,9 @@ def broadcast(ThreadCount,t_end):
 def tcpConnect(ThreadCount,t_end):
     global ServerSocket
     try:
-        ServerSocket.bind((host, port+ThreadCount))
+        ServerSocket.bind((SSH_HOST, SSH_PORT+ThreadCount))
+        print("The port I am binding is: ", SSH_PORT+ThreadCount)
+        # server.bind((host, port))
     except socket.error as e:
         print(str(e))
 
@@ -131,6 +143,9 @@ def tcpConnect(ThreadCount,t_end):
         print('Thread Number: ' + str(ThreadCount))
 
 
+
+
+
 def main():
     global ServerSocket
     global clients
@@ -146,14 +161,13 @@ def main():
     group1 = []
     group2 = []
     try:
-
         ServerSocket = socket.socket()
-        t_end = time.time() + 10
-        start_new_thread(broadcast, (ThreadCount,t_end)) #send brodcast
+        start_new_thread(broadcast, (ThreadCount,)) #send brodcast
+        t_end = time.time() + 20  # change to 10
         start_new_thread(tcpConnect, (ThreadCount, t_end,)) #connect to server
     except:
        print("Error: unable to start thread")
-    fin = time.time() + 25 # change time
+    fin = time.time() + 40
     while time.time() < fin:
         time.sleep(1)
     for client in clients.keys():
@@ -166,12 +180,10 @@ def main():
         pass
 
 
-def startS(num):
-    main()
-    #print("srvet")
-    #while True:
-    #    flag = False
-    #    flag = main()
-    #    if flag :
-    #        flag = False
-    #       flag = main()
+while True:
+    flag = False
+    flag = main()
+    if flag:
+        flag = False
+        flag = main()
+

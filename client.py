@@ -1,49 +1,53 @@
 import socket
 import random
+import keyboard
 import time
 from _thread import *
-import getch
+import msvcrt
 import struct
-import sys, errno
-from signal import signal, SIGPIPE, SIG_DFL
-from scapy.arch import get_if_addr
 
+MSG_LEN = 1024
+FORMAT = 'utf-8'
+SSH_HOST = ""
+SSH_PORT = 2116
+portUDP = 37020
 
 def keyboard_client(ClientSocket, t_end):
-    while time.time() < t_end:
-        #if getch.kbhit():
-        try:
-            try1 = getch.getch()
-            ClientSocket.send(str.encode(str(try1)))
-        except IOError as e:
-            if e.errno == errno.EPIPE:
-            #signal(SIGPIPE,SIG_DFL)
-                print("error")
-                break
-    return
 
+    while time.time() < t_end:
+
+        if msvcrt.kbhit():
+
+            try1 = msvcrt.getch()  # read_key(True)
+            ClientSocket.send(str.encode(str(try1)))
+    Response = ClientSocket.recv(MSG_LEN).decode(FORMAT)
+
+    print(Response)
+
+
+
+
+# ClientSocket.close()
 def main():
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
     client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     print("Client started, listening for offer requests...")
-    portUDP = 13117
+
     client.bind(("", portUDP))
-    flag = True  # change name
-    while flag:
-        m_pack, addr = client.recvfrom(1024)
-        m = struct.unpack('Ibh', m_pack)
+    b_m = True  # change name
+    while b_m:
+        m_pack, addr = client.recvfrom(MSG_LEN)
+        m = struct.unpack('IbH', m_pack)
         cookie = hex(m[0])
         type = hex(m[1])
         port_to_connect = m[2]
-        print(port_to_connect)
         if cookie == hex(0xfeedbeef) and type == hex(0x2):
-            flag = False
+            b_m = False
     print("Recived offer from ", addr[0], " attempting to connect...")
     ClientSocket = socket.socket()
-    #host = '127.0.0.12'
-    host = get_if_addr("eth1")
-    port = 1233
+    host = SSH_HOST
+    port = SSH_PORT
 
     while True:
         try:
@@ -52,21 +56,20 @@ def main():
             break
         except socket.error as e:
             print(str(e))
-    Response = ClientSocket.recv(1024)
-    print(Response.decode('utf-8'))
+    Response = ClientSocket.recv(MSG_LEN)
+    print(Response.decode(FORMAT))
     Input = input('Group name: ')
     ClientSocket.send(str.encode(Input))
-    Response = ClientSocket.recv(1024)
-    print(Response.decode('utf-8'))
-    t_end = time.time() + 10
+    Response = ClientSocket.recv(MSG_LEN)
+    print(Response.decode(FORMAT))
+    t_end = time.time() + 20
     keyboard_client(ClientSocket, t_end)
     stam = 0
     while time.time() < t_end:
         stam += 1
+    print("Client is on main")
     while True:
         try:
-            Response = ClientSocket.recv(1024).decode('utf-8')
-            print(Response)
             print("Server disconnected, listening for offer request...")
             ClientSocket.close()
             return True
@@ -74,16 +77,14 @@ def main():
         except:
             continue
 
+
     while 1:
         pass
 
-def start(num):
-    main()
-    #print("client")
-    #while True:
-    #    flag = False
-    #    flag = main()
-    #    if flag :
-    #        flag = False
-    #        flag = main()
 
+while True:
+    flag = False
+    flag = main()
+    if flag :
+        flag = False
+        flag = main()
