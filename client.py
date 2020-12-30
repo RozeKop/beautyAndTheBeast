@@ -42,20 +42,11 @@ while True:
 
 
 def keyboard_client(ClientSocket, t_end):
-    print("here")
     while time.time() < t_end:
-        # while True:
-        # print("here2")
-        # while msvcrt.kbhit():
         if msvcrt.kbhit():
-            print("here2")
             try1 = msvcrt.getch()  # read_key(True)
             ClientSocket.send(str.encode(str(try1)))
-            print(str(try1), " ", ClientSocket.getsockname()[1], "I am sending")
-            print(ClientSocket.getpeername()[0], ClientSocket.getpeername()[1])
-
-    Response = ClientSocket.recv(1024)
-    print(Response.decode('utf-8'))
+    return
 
 
 Response = ClientSocket.recv(1024)
@@ -65,11 +56,23 @@ ClientSocket.send(str.encode(Input))
 Response = ClientSocket.recv(1024)
 print(Response.decode('utf-8'))
 t_end = time.time() + 20
-
 try:
     start_new_thread(keyboard_client, (ClientSocket, t_end,))  # connect to server
 except:
     print("Error: unable to start thread")
+stam = 0
+while time.time() < t_end:
+    stam += 1
+print("Client is on main")
+while True:
+    try:
+        Response = ClientSocket.recv(1024)
+        print(Response.decode('utf-8'))
+        break
+    except:
+        continue
+# Response = ClientSocket.recv(1024)
+# print(Response.decode('utf-8'))
 
 while 1:
     pass
