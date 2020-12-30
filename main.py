@@ -1,37 +1,19 @@
-import socket
+from server import startS
+from client import start
+from _thread import *
 import time
 
-HOST = '172.1.0.4'  # Standard loopback interface address (localhost)
-PORT = 65432        # Port to listen on (non-privileged ports are > 1023)
+num = 1
+try:
 
-HOST = '172.1.0.88'  # Standard loopback interface address (localhost)
-PORT = 65433        # Port to listen on (non-privileged ports are > 1023)
-
-#Mysty server
-server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-# Set a timeout so the socket does not block
-# indefinitely when trying to receive data.
-server.settimeout(0.2)
-print("Server started, listening on IP address 172.1.04")
-server.bind(("", 44444))
-message = b"your very important message"
-while True:
-    server.sendto(message, ('<broadcast>', 37020))
-    print("message sent!")
+    start_new_thread(startS, (num,))
     time.sleep(1)
+    start_new_thread(start, (num,))
+    start_new_thread(start, (num,))
+    time.sleep(25)
+except:
+    print("unable to open thred")
 
-#second server
-server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-# Set a timeout so the socket does not block
-# indefinitely when trying to receive data.
-server.settimeout(0.2)
-print("Server started, listening on IP address 172.1.04")
-server.bind(("", 44445))
-message = b"your very important message"
-while True:
-    server.sendto(message, ('<broadcast>', 37020))
-    print("message sent!")
+while 1:
     time.sleep(1)
-
+    pass
