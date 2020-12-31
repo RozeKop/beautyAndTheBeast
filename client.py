@@ -1,10 +1,11 @@
 import socket
 import random
-import keyboard
+#import keyboard
 import time
 from _thread import *
-import msvcrt
+#import msvcrt
 import struct
+import getch
 
 from scapy.arch import get_if_addr
 
@@ -23,9 +24,9 @@ input: the time that is left for the game and the client's socket that press on 
 """
 def keyboard_client(ClientSocket, t_end):#start of game state
     while time.time() < t_end: #for the duration of the game given
-        if msvcrt.kbhit():#if key press detected, register it and send it to the server
-            try1 = msvcrt.getch()
-            ClientSocket.send(str.encode(str(try1)))
+        #if msvcrt.kbhit():#if key press detected, register it and send it to the server
+        try1 = getch.getch()
+        ClientSocket.send(str.encode(str(try1)))
     Response = ClientSocket.recv(MSG_LEN).decode(FORMAT) #end of game messege
     print(Response)
 
