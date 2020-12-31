@@ -6,9 +6,11 @@ from _thread import *
 import msvcrt
 import struct
 
+from scapy.arch import get_if_addr
+
 MSG_LEN = 1024
 FORMAT = 'utf-8'
-SSH_HOST = ""
+SSH_HOST = get_if_addr("eth1")
 SSH_PORT = 2116
 portUDP = 13117
 #from scapy.arch import get_if_addr #for ssh
@@ -45,11 +47,11 @@ def main():
             flag = False
     print("Recived offer from ", addr[0], " attempting to connect...")
     ClientSocket = socket.socket()
-    host = addr[0]
+
 
     while True:
         try:
-            ClientSocket.connect((host, SSH_PORT))#attempting to connect to TCP server
+            ClientSocket.connect((SSH_HOST, SSH_PORT))#attempting to connect to TCP server
             break
         except socket.error as e:
             print(str(e))
@@ -80,6 +82,8 @@ def main():
 while True:#runs until manually interrupted
     flag = False
     flag = main()
+
     if flag :
         flag = False
         flag = main()
+

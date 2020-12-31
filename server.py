@@ -6,11 +6,12 @@ import random
 import struct
 import threading
 #from scapy.arch import get_if_addr # for ssh
+from scapy.arch import get_if_addr
 
 ServerSocket = 0
 MSG_LEN = 1024
 FORMAT = 'utf-8'
-SSH_HOST = '127.0.0.1' # get_if_addr("eth1") - for ssh
+SSH_HOST = get_if_addr("eth1")
 SSH_PORT = 2116
 portUDP = 44444
 sendUDP = 13117
@@ -118,7 +119,7 @@ def broadcast(ThreadCount):
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     server.bind(("", portUDP))  # broadcasting UDP offer
-    message = struct.pack('IbH', hex(0xfeedbeef), hex(0x2),SSH_PORT)  # sending valid broadcast message to indentify ourselves as the "correct" server
+    message = struct.pack('IbH', 0xfeedbeef, 0x2,SSH_PORT)  # sending valid broadcast message to indentify ourselves as the "correct" server
     t_end = time.time() + 10
     while time.time() < t_end:
         server.sendto(message, ('<broadcast>', sendUDP))
@@ -184,6 +185,8 @@ def main():
 while True:  # runs until manually interrupted
     flag = False
     flag = main()
+    print("Game over, sending out offer requests...")
     if flag:
         flag = False
         flag = main()
+        print("Game over, sending out offer requests...")
