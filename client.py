@@ -12,15 +12,14 @@ SSH_HOST = ""
 SSH_PORT = 2116
 portUDP = 37020
 
-def keyboard_client(ClientSocket, t_end):
+def keyboard_client(ClientSocket, t_end):#start of game state
 
-    while time.time() < t_end:
+    while time.time() < t_end: #for the duration of the game given
 
-        if msvcrt.kbhit():
-
+        if msvcrt.kbhit():#if key press detected, register it and send it to the server
             try1 = msvcrt.getch()  # read_key(True)
             ClientSocket.send(str.encode(str(try1)))
-    Response = ClientSocket.recv(MSG_LEN).decode(FORMAT)
+    Response = ClientSocket.recv(MSG_LEN).decode(FORMAT) #end of game messege
 
     print(Response)
 
@@ -34,11 +33,11 @@ def main():
     client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     print("Client started, listening for offer requests...")
 
-    client.bind(("", portUDP))
+    client.bind(("", portUDP))#listening on broadcast
     b_m = True  # change name
-    while b_m:
+    while b_m:#recieveing conenction offer
         m_pack, addr = client.recvfrom(MSG_LEN)
-        m = struct.unpack('IbH', m_pack)
+        m = struct.unpack('IbH', m_pack)#identifying the recieved messege as the "expected" messege by its specific format
         cookie = hex(m[0])
         type = hex(m[1])
         port_to_connect = m[2]
@@ -47,23 +46,22 @@ def main():
     print("Recived offer from ", addr[0], " attempting to connect...")
     ClientSocket = socket.socket()
     host = SSH_HOST
-    port = SSH_PORT
 
     while True:
         try:
-            ClientSocket.connect((host, port_to_connect))
+            ClientSocket.connect((host, SSH_PORT))#attempting to connect to TCP server
 
             break
         except socket.error as e:
             print(str(e))
-    Response = ClientSocket.recv(MSG_LEN)
+    Response = ClientSocket.recv(MSG_LEN )#welcome messege for group registration
     print(Response.decode(FORMAT))
     Input = input('Group name: ')
     ClientSocket.send(str.encode(Input))
-    Response = ClientSocket.recv(MSG_LEN)
+    Response = ClientSocket.recv(MSG_LEN) #recieving and printing game instructions from server
     print(Response.decode(FORMAT))
     t_end = time.time() + 20
-    keyboard_client(ClientSocket, t_end)
+    keyboard_client(ClientSocket, t_end)#starting game
     stam = 0
     while time.time() < t_end:
         stam += 1
@@ -82,7 +80,7 @@ def main():
         pass
 
 
-while True:
+while True:#runs until manually interrupted
     flag = False
     flag = main()
     if flag :
