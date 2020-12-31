@@ -5,14 +5,15 @@ from _thread import *
 import random
 import struct
 import threading
+#from scapy.arch import get_if_addr # for ssh
 
 ServerSocket = 0
 MSG_LEN = 1024
 FORMAT = 'utf-8'
-SSH_HOST = ""
+SSH_HOST = '127.0.0.1' # get_if_addr("eth1") - for ssh
 SSH_PORT = 2116
 portUDP = 44444
-sendUDP = 37020
+sendUDP = 13117
 ThreadCount = 0
 group1 = []
 group2 = []
@@ -24,6 +25,9 @@ counter2 = 0
 lock = threading.Lock()
 
 
+"""
+this function is in charge of splitting the the clients into groups and staring the game
+"""
 def threaded_client(connection, t_end):
     global clients
     global choose_team
@@ -31,7 +35,7 @@ def threaded_client(connection, t_end):
     data = connection.recv(MSG_LEN)  # recieves team name from client
     name = data.decode(FORMAT)
 
-    #######splits incoming client between both groups equally and prints the players in each group on the server
+    #######splits incoming client between both groups equally
     if choose_team == 0:
         group1.append(name[:len(name) - 1])
         portToGroup[connection.getpeername()[1]] = 1
@@ -40,8 +44,6 @@ def threaded_client(connection, t_end):
         group2.append(name[:len(name) - 1])
         portToGroup[connection.getpeername()[1]] = 2
         choose_team = 0
-    print(group1)
-    print(group2)
     stam = 0
     while time.time() < t_end:
         stam += 1
@@ -83,12 +85,10 @@ def welcome_message(connection):
                     lock.acquire()
                     counter1 += max(len(Response) // 4, 1)
                     lock.release()
-                    print("1: ", counter1)
                 else:
                     lock.acquire()
                     counter2 += max(len(Response) // 4, 1)
                     lock.release()
-                    print("2: ", counter2)
 
     # creates end of game message, announces the winning team and sends to all the clients
     massage = "Game over!\nGroup1 typed in " + str(counter1) + " characters. Group 2 typed in " + str(
@@ -105,31 +105,34 @@ def welcome_message(connection):
     else:
         for i in range(len(group2)):
             massage += group2[i] + "\n"
-    connection.send(massage.encode())
+    connection.send(massage.encode()) #sending the end Game message
 
-
+"""
+this function opens the UDP socket and sends the 
+"""
 def broadcast(ThreadCount):
+    global SSH_HOST
+    global SSH_PORT
     print("Server started,listening on IP address ", SSH_HOST)
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    server.bind((SSH_HOST, portUDP))  # broadcasting UDP offer
-    # message = "offer " + str(port + ThreadCount)
-    message = struct.pack('IbH', 0xfeedbeef, 0x2,
-                          SSH_PORT)  # sending valid broadcast message to indentify ourselves as the "correct" server
-    t_end = time.time() + 10  # change to 10
+    server.bind(("", portUDP))  # broadcasting UDP offer
+    message = struct.pack('IbH', hex(0xfeedbeef), hex(0x2),SSH_PORT)  # sending valid broadcast message to indentify ourselves as the "correct" server
+    t_end = time.time() + 10
     while time.time() < t_end:
         server.sendto(message, ('<broadcast>', sendUDP))
-        print("message sent!")
         time.sleep(1)
 
-
+"""
+connecting the clients via TCP
+"""
 def tcpConnect(ThreadCount, t_end):
+    global SSH_HOST
+    global SSH_PORT
     global ServerSocket
     try:
-        ServerSocket.bind((SSH_HOST, SSH_PORT + ThreadCount))  # opening socket for incoming client
-        print("The port I am binding is: ", SSH_PORT + ThreadCount)
-        # server.bind((host, port))
+        ServerSocket.bind((SSH_HOST, SSH_PORT))  # opening socket for incoming client
     except socket.error as e:
         print(str(e))
 
@@ -140,11 +143,9 @@ def tcpConnect(ThreadCount, t_end):
             Client, address = ServerSocket.accept()  # connecting client to server
         except:
             continue
-        print('Connected to: ' + address[0] + ':' + str(address[1]))
         clients[address[1]] = Client  # saving all our connections for later use
         start_new_thread(threaded_client, (Client, t_end,))  # starting new thread for game state
         ThreadCount += 1
-        print('Thread Number: ' + str(ThreadCount))
 
 
 def main():
@@ -164,11 +165,11 @@ def main():
     try:
         ServerSocket = socket.socket()
         start_new_thread(broadcast, (ThreadCount,))  # send brodcast
-        t_end = time.time() + 20  # change to 10
+        t_end = time.time() + 10
         start_new_thread(tcpConnect, (ThreadCount, t_end,))  # connect to tcp server
     except:
         print("Error: unable to start thread")
-    fin = time.time() + 40
+    fin = time.time() + 25
     while time.time() < fin:
         time.sleep(1)
     for client in clients.keys():  # at the end of the run close all connections
